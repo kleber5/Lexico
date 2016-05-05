@@ -1,0 +1,211 @@
+# Lexico
+Analisador lexico
+
+ #include <stdlib.h>
+ #include <ctype.h>
+ #include <stdio.h>
+ #include <string.h>
+
+ #define TOKEN int
+ #define TOKEN_NUM 1
+ #define TOKEN_LITERAL 2
+ #define TOKEN_ID 3
+ #define TOKEN_COMENTARIO 4
+ #define TOKEN_ESPACO 5
+ #define TOKEN_EOF 6
+ #define TOKEN_OPR 7
+ #define TOKEN_RCB 8
+ #define TOKEN_OPM 9
+ #define TOKEN_AB_P 10
+ #define TOKEN_FC_P 11
+ #define TOKEN_PT_V 12
+ #define TOKEN_ERRO 0
+
+ #define COLUNA int
+ #define D 0
+ #define PONTO 1
+ #define E 2
+ #define MENOS 3
+ #define MAIS 4
+ #define L 5
+ #define UNDERLINE 6
+ #define ASP 7
+ #define OUTRO 8
+ #define IGUAL 9
+ #define MENOR 10
+ #define MAIOR 11
+ #define AB_P 12
+ #define FC_P 13
+ #define PT_V 14
+ #define AST 15
+ #define BARRA 16
+ #define AB_C 17
+ #define FC_C 18
+ #define ESPACO 19
+ #define BARRA_N 20
+ #define FIM_ARQUIVO 21
+
+
+ int tab_transicao [30][23] =
+{ // 0  1   2     3   4     5   6   7   8     9     10   11    12  13  14  15  16  17   18    19    20      21
+  // D	.	E	  -	  +	    L	_	"  OUTRO  =	    <	  >     (	)   ;   *   /   {    }  ESPACO  \n  FIM_ARQUIVO
+    {1,	-1,	-1,  23, 22,	7,	-1,	 8,	-1,	  11,   12,  17,    18,	19,	20,	23,	24,	10,	-1,	  0,     0, 25},   //estado 0
+    {1,  2,	 4,	 27, 27,	27,	27,	27,	27,	  27,   27,  27,	27,	27,	27,	27,	27,	27,	27,	 27,    27, 27},   //estado 1
+    {3,	29,	 29, 29, 29,	29,	29,	29,	29,	  29,   29,  29,	29,	29,	29,	29,	29,	29,	29,	 29,    29, 29},   //estado 2
+    {3, 27,	 4,	 27, 27,	27,	27,	27,	27,	  27,	27,	 27,	27,	27,	27,	27,	27,	27,	27,	 27,	27,	27},   //estado 3
+    {6,	-1,	 -1,  5,  5,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 4
+    {6,	-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 5
+    {6,	27,	 27, 27, 27,	27,	27,	27,	27,	  27,	27,	 27,	27,	27,	27,	27,	27,	27,	27,	 27,	27,	27},   //estado 6
+    {7,	26,	 26, 26, 26,	7,	7,	26,	26,	  26,	26,	 26,	26,	26,	26,	26,	26,	26,	26,	 26,	26,	26},   //estado 7
+    {8,	 8,	  8,  8,  8,	8,	8,	 9,	 8,	   8,	 8,	  8,	 8,  8,	 8,	 8,	 8,	 8,	 8,	  8,	 8,	-1},   //estado 8
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,  -1,	-1,	-1},   //estado 9
+    {10,10,	 10, 10, 10,	10,	10,	10,	10,	  10,	10,	 10,	10,	10,	10,	10,	10,	10,	28,	  8,	 8,	-1},   //estado 10
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 11
+    {-1,-1,	 -1, 13, -1,	-1,	-1,	-1,	-1,	  14,	-1,	 15,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 12
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 13
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 14
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 15
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  17,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 16
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 17
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 18
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 19
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 20
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 21
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 22
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 23
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},   //estado 24
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},    //estado 25
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},    //estado 26 - erro id
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},    //estado 27 - erro num
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1},    //estado 28 - erro comentario
+    {-1,-1,	 -1, -1, -1,	-1,	-1,	-1,	-1,	  -1,	-1,	 -1,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	 -1,	-1,	-1}    //estado 29 - erro
+
+};
+ //Mapeamento caracterer/coluna
+
+ COLUNA mapa_caracter_coluna(char c)
+ {
+        if (isdigit(c)) return D;
+        if (c=='.')	 return PONTO;
+        if (c=='E')  return E;
+        if (c=='-')      return MENOS;
+        if (c=='+')      return MAIS;
+        if (isalpha (c)) return L;
+        if (c=='_')      return UNDERLINE;
+        if (c=='*')      return AST;
+        if (c=='/')      return BARRA;
+        if (c=='(')      return AB_P;
+        if (c==')')      return FC_P;
+        if (c=='{')      return AB_C;
+        if (c=='}')      return FC_C;
+        if (c=='"')      return ASP;
+        if (c=='=')      return IGUAL;
+        if (c=='>')      return MAIOR;
+        if (c=='<')      return MENOR;
+        if (c==';')     return PT_V;
+        if (c=='\n')    return BARRA_N;
+        if (c==' ')     return ESPACO;
+        if (c==EOF)     return FIM_ARQUIVO;
+        return OUTRO;
+ }
+
+ TOKEN mapa_estado_token(int estado)
+ {
+
+       if(estado == 1) return TOKEN_NUM;
+       if(estado == 3) return TOKEN_NUM;
+       if(estado == 6) return TOKEN_NUM;
+       if(estado == 7) return TOKEN_ID;
+       if(estado == 9) return TOKEN_LITERAL;
+       if(estado == 28) return TOKEN_COMENTARIO;
+       if(estado == 11) return TOKEN_OPR;
+       if(estado == 12) return TOKEN_OPM;
+       if(estado == 13) return TOKEN_RCB;
+       if(estado == 14) return TOKEN_OPR;
+       if(estado == 15) return TOKEN_OPR;
+       if(estado == 16) return TOKEN_OPR;
+       if(estado == 17) return TOKEN_OPR;
+       if(estado == 18) return TOKEN_AB_P;
+       if(estado == 19) return TOKEN_FC_P;
+       if(estado == 20) return TOKEN_PT_V;
+       if(estado == 21) return TOKEN_OPM;
+       if(estado == 22) return TOKEN_OPM;
+       if(estado == 23) return TOKEN_OPM;
+       if(estado == 24) return TOKEN_OPM;
+       if(estado == 25) return TOKEN_EOF;
+       if(estado == 26) return TOKEN_ID;
+       if(estado == 27) return TOKEN_NUM;
+       if(estado == 29) return TOKEN_ERRO;
+       return TOKEN_ERRO;
+ }
+
+ TOKEN lexico(FILE *texto_fonte, char* nome)
+ {
+       int estado = 0, k = 0 ;
+       char caracter;
+
+        memset(nome, '\0', 50*sizeof(char));
+       do
+       {
+             caracter = fgetc(texto_fonte);
+             if (caracter == EOF) nome[k++] = '\0';
+             else nome[k++] = caracter;
+             estado = tab_transicao[estado][mapa_caracter_coluna(caracter)];
+          //  printf("\ncaracter = %c(%d), mapa_c = %d, mapa_e = %d, estado = %d\n", caracter, caracter, mapa_caracter_coluna(caracter), mapa_estado_token(estado), estado);
+
+       }while (tab_transicao[estado][mapa_caracter_coluna(caracter)] != -1 );
+//             printf("\ncaracter = %c(%d), mapa_c = %d, mapa_e = %d, estado = %d\n", caracter, caracter, mapa_caracter_coluna(caracter), mapa_estado_token(estado), estado);
+
+      // ungetc(caracter,texto_fonte);  //devolve caracter ao arquivo
+//printf ("mapa_estado = %i\n", mapa_estado_token(estado));
+//printf ("%i \n", mapa_caracter_coluna(caracter));
+
+//Aqui tenho que fazer a verificação se é ou não palavra reservada.!!
+
+
+       return mapa_estado_token(estado);
+ }
+
+ int main(int argc, char *argv[])
+ {
+
+     FILE *texto_fonte;
+     TOKEN token;
+ /*    if(argc != 2)
+     {
+        printf("\nnome do arquivo esperado\n");
+        exit(0);
+     }
+*/
+     texto_fonte = fopen("texto_fonte.txt","r");
+     if(! texto_fonte ) // texto_fonte == NULL
+     {
+          printf("\nproblema na abertura do arquivo %s\n",argv[1]);
+          exit(0);
+     }
+    char *nome = malloc(sizeof(char)*50);
+     while(((token = lexico(texto_fonte, nome)) != TOKEN_ERRO ) && (token != TOKEN_EOF)){
+          if(token == TOKEN_NUM ) printf("\nnumero = %s\n", nome);
+          if(token == TOKEN_ID )      printf("\nid = %s\n", nome);
+          if(token == TOKEN_LITERAL )      printf("\nliteral = %s\n", nome);
+          if(token == TOKEN_OPR )      printf("\noperador relacional = %s\n", nome);
+          if(token == TOKEN_RCB )      printf("\natribuicao = %s\n", nome);
+          if(token == TOKEN_AB_P )      printf("\nabre parenteses = %s\n", nome);
+          if(token == TOKEN_FC_P )      printf("\nfecha parenteses = %s\n", nome);
+          if(token == TOKEN_PT_V )      printf("\nponto e virgula = %s\n", nome);
+          if(token == TOKEN_OPM )      printf("\noperador matematico = %s\n", nome);
+
+          }
+
+     if(token == TOKEN_EOF ) printf("\nfim de arquivo");
+     if(token == TOKEN_ERRO )        printf("\nerro");
+
+     getchar();
+
+     return 0;
+ }
+
+
+
+
+
